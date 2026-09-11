@@ -1,23 +1,42 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require ('helmet');
-const habitRoutes = require('./routes/habit.routes');
-const errorHandler = require('./middlewares/errorHandler');
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
+import hpp from 'hpp';
+import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
+
+import habitRoutes from './routes/habit.routes.js';
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+app.use(helmet());
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: 'Demasiadas peticiones desde esta IP. Intenta de nuevo en 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api', limiter);
+
+app.use(express.json({ limit: '10kb' }));
+app.use(cookieParser());
+
+app.use(mongoSanitize());
+
+app.use(hpp());
 
 app.use('/api/habits', habitRoutes);
 
 app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    mensaje: 'The route does not exist.'
-  });
+  res.status(404).json({ error: 'Ruta no encontrada' });
 });
 
-app.use(errorHandler);
-
-module.exports = app;
+export default app;
