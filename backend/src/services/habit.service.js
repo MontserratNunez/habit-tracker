@@ -1,4 +1,4 @@
-import Habit from '../models/Habit.js';
+import Habit from '../models/habit.js';
 
 export const getUserHabits = async (userId) => {
   return await Habit.find({ user: userId }).sort({ createdAt: -1 });
