@@ -11,7 +11,7 @@ export const getHabits = async (req, res) => {
   try {
     const habits = await habitService.getUserHabits(req.user.id);
     res.status(200).json({ success: true, count: habits.length, data: habits });
-  } catch (error) {
+  } catch {
     res.status(500).json({ success: false, error: 'Error del servidor al obtener hábitos' });
   }
 };
