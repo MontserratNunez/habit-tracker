@@ -4,10 +4,10 @@ const app = require('./src/app');
 
 dotenv.config();
 
-conectBD();
-
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server in port: ${PORT}`);
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`[Servidor] Corriendo en el puerto ${PORT} en modo ${process.env.NODE_ENV || 'development'}`);
+  });
 });
