@@ -7,4 +7,4 @@ const validateRequest = (schema, target = 'body') => (req, res, next) => {
   }
 };
 
-module.exports = validateRequest;
+export default validateRequest;

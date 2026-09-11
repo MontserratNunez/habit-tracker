@@ -1,4 +1,4 @@
-const { ZodError } = require('zod');
+import { ZodError } from 'zod';
 
 const errorHandler = (err, req, res, next) => {
   let statusCode = 500;
@@ -29,4 +29,4 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
-module.exports = errorHandler;
+export default errorHandler;
