@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 
 import habitRoutes from './routes/habit.routes.js';
+import authRoutes from './routes/auth.routes.js';
 
 import errorHandler from './middlewares/errorHandler.js';
 
