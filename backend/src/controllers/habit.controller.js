@@ -82,3 +82,34 @@ export const completeHabit = async (req, res, next) => {
     next(error);
   }
 };
+
+
+
+// views
+
+export const getTodayHabits = async (req, res, next) => {
+  try {
+    const result = await habitService.getTodayHabitsService(req.user.id);
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getWeeklyHabits = async (req, res, next) => {
+  try {
+    const result = await habitService.getWeeklyHabitsService(req.user.id);
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMonthlyHabits = async (req, res, next) => {
+  try {
+    const result = await habitService.getMonthlyHabitsService(req.user.id);
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    next(error);
+  }
+};
