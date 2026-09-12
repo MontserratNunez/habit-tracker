@@ -12,6 +12,7 @@ jest.unstable_mockModule('../services/habit.service.js', () => ({
   getTodayHabitsService: jest.fn(),
   getWeeklyHabitsService: jest.fn(),
   getMonthlyHabitsService: jest.fn(),
+  getHabitsHistoryService: jest.fn(),
 }));
 
 jest.unstable_mockModule('../middlewares/auth.middleware.js', () => ({
@@ -92,6 +93,40 @@ describe('Habit Endpoints', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.period).toBe('this_month');
       expect(habitService.getMonthlyHabitsService).toHaveBeenCalledWith('mocked_user_id_123');
+    });
+  });
+
+  describe('GET /api/habits/stats/history', () => {
+    it('debe retornar el historial de hábitos para un rango de fechas con status 200', async () => {
+      const mockResult = {
+        period: {
+          startDate: '2026-08-01T00:00:00.000Z',
+          endDate: '2026-08-31T23:59:59.999Z',
+        },
+        summary: { totalHabits: 1, totalCompletions: 5 },
+        data: [
+          {
+            _id: 'habit_123',
+            title: 'Hacer ejercicio',
+            completedDatesInRange: ['2026-08-05T00:00:00.000Z'],
+          },
+        ],
+      };
+
+      habitService.getHabitsHistoryService.mockResolvedValue(mockResult);
+
+      const res = await request(app)
+        .get('/api/habits/stats/history')
+        .query({ startDate: '2026-08-01', endDate: '2026-08-31' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.summary.totalCompletions).toBe(5);
+      expect(habitService.getHabitsHistoryService).toHaveBeenCalledWith(
+        'mocked_user_id_123',
+        '2026-08-01',
+        '2026-08-31'
+      );
     });
   });
 

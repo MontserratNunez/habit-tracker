@@ -307,6 +307,59 @@ export const getMonthlyHabitsService = async (userId) => {
   };
 };
 
+export const getHabitsHistoryService = async (userId, startDateStr, endDateStr) => {
+  const startDate = new Date(startDateStr);
+  startDate.setHours(0, 0, 0, 0);
+
+  const endDate = new Date(endDateStr);
+  endDate.setHours(23, 59, 59, 999);
+
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    throw new AppError('Las fechas proporcionadas no son válidas', 400);
+  }
+
+  if (startDate > endDate) {
+    throw new AppError('La fecha inicial no puede ser mayor a la fecha final', 400);
+  }
+
+  const habits = await Habit.find({
+    user: userId,
+    createdAt: { $lte: endDate },
+  }).sort({ createdAt: -1 });
+
+  let totalCompletionsInRange = 0;
+
+  const historyData = habits.map((habit) => {
+    const completionsInRange = habit.completedDates.filter((dateStr) => {
+      const d = new Date(dateStr);
+      return d >= startDate && d <= endDate;
+    });
+
+    totalCompletionsInRange += completionsInRange.length;
+
+    return {
+      _id: habit._id,
+      title: habit.title,
+      frequency: habit.frequency,
+      status: habit.status,
+      createdAt: habit.createdAt,
+      completedDatesInRange: completionsInRange,
+      totalCompletionsCount: completionsInRange.length,
+    };
+  });
+
+  return {
+    period: {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    },
+    summary: {
+      totalHabits: habits.length,
+      totalCompletions: totalCompletionsInRange,
+    },
+    data: historyData,
+  };
+};
 
 // ==========================================
 // utils

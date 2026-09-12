@@ -36,6 +36,11 @@ const habitCreateSchema = z.object({
   frequency: frequencySchema.default({ type: 'daily' }),
 });
 
+const historyQuerySchema = z.object({
+  startDate: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
+  endDate: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
+});
+
 export const getHabits = async (req, res, next) => {
   try {
     const habits = await habitService.getUserHabits(req.user.id, req.query.status);
@@ -117,6 +122,25 @@ export const getWeeklyHabits = async (req, res, next) => {
 export const getMonthlyHabits = async (req, res, next) => {
   try {
     const result = await habitService.getMonthlyHabitsService(req.user.id);
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getHabitsHistory = async (req, res, next) => {
+  try {
+    const { startDate, endDate } = historyQuerySchema.parse(req.query);
+
+    const now = new Date();
+    const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const defaultEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
+
+    const start = startDate || defaultStart;
+    const end = endDate || defaultEnd;
+
+    const result = await habitService.getHabitsHistoryService(req.user.id, start, end);
+
     res.status(200).json({ success: true, ...result });
   } catch (error) {
     next(error);
