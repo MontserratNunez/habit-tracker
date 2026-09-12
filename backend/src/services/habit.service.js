@@ -1,4 +1,6 @@
 import Habit from '../models/habit.js';
+import mongoose from 'mongoose';
+import AppError from '../utils/AppError.js';
 
 export const getUserHabits = async (userId) => {
   return await Habit.find({ user: userId }).sort({ createdAt: -1 });
@@ -12,12 +14,14 @@ export const createNewHabit = async (habitData, userId) => {
 };
 
 export const checkInHabit = async (habitId, userId) => {
+  if (!mongoose.Types.ObjectId.isValid(habitId)) {
+    throw new AppError('El ID del hábito no es válido', 400);
+  }
+
   const habit = await Habit.findOne({ _id: habitId, user: userId });
 
   if (!habit) {
-    const error = new Error('Hábito no encontrado');
-    error.statusCode = 404;
-    throw error;
+    throw new AppError('Hábito no encontrado', 404);
   }
 
   const today = new Date();
@@ -30,9 +34,7 @@ export const checkInHabit = async (habitId, userId) => {
   });
 
   if (alreadyCompleted) {
-    const error = new Error('Este hábito ya fue completado hoy');
-    error.statusCode = 400;
-    throw error;
+    throw new AppError('Este hábito ya fue completado hoy', 400);
   }
 
   const lastCompleted = habit.lastCompleted ? new Date(habit.lastCompleted) : null;

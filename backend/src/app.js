@@ -8,6 +8,8 @@ import rateLimit from 'express-rate-limit';
 
 import habitRoutes from './routes/habit.routes.js';
 
+import errorHandler from './middlewares/errorHandler.js';
+
 const app = express();
 
 app.use(helmet());
@@ -37,10 +39,13 @@ app.use((req, res, next) => {
 
 app.use(hpp());
 
+app.use('/api/auth', authRoutes);
 app.use('/api/habits', habitRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada' });
 });
+
+app.use(errorHandler);
 
 export default app;
