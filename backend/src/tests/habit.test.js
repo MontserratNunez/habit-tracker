@@ -4,6 +4,7 @@ import express from 'express';
 
 jest.unstable_mockModule('../services/habit.service.js', () => ({
   getUserHabits: jest.fn(),
+  getHabitByIdService: jest.fn(),
   createNewHabit: jest.fn(),
   toggleHabitStatusService: jest.fn(),
   deleteHabitService: jest.fn(),
@@ -109,6 +110,26 @@ describe('Habit Endpoints', () => {
       expect(res.body.count).toBe(2);
       expect(res.body.data).toEqual(mockHabits);
       expect(habitService.getUserHabits).toHaveBeenCalledWith('mocked_user_id_123', 'true');
+    });
+  });
+
+  describe('GET /api/habits/:id', () => {
+    it('debe obtener un hábito por su ID con status 200', async () => {
+      const mockHabit = {
+        _id: 'habit_123',
+        title: 'Leer 20 páginas',
+        frequency: { type: 'daily' },
+        user: 'mocked_user_id_123',
+      };
+
+      habitService.getHabitByIdService.mockResolvedValue(mockHabit);
+
+      const res = await request(app).get('/api/habits/habit_123');
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toEqual(mockHabit);
+      expect(habitService.getHabitByIdService).toHaveBeenCalledWith('habit_123', 'mocked_user_id_123');
     });
   });
 

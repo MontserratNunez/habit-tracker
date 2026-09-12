@@ -45,6 +45,15 @@ export const getHabits = async (req, res, next) => {
   }
 };
 
+export const getHabitById = async (req, res, next) => {
+  try {
+    const habit = await habitService.getHabitByIdService(req.params.id, req.user.id);
+    res.status(200).json({ success: true, data: habit });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const createHabit = async (req, res, next) => {
   try {
     const validatedData = habitCreateSchema.parse(req.body);

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getHabits,
+  getHabitById,
   createHabit,
   completeHabit,
   toggleHabitStatus,
@@ -24,6 +25,7 @@ router.route('/')
   .post(createHabit);
 
 router.route('/:id')
+  .get(getHabitById)
   .delete(deleteHabit);
 
 router.patch('/:id/toggle-status', toggleHabitStatus);
