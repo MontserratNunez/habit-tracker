@@ -15,9 +15,29 @@ const habitSchema = new mongoose.Schema(
       maxlength: [100, 'El título no puede superar los 100 caracteres'],
     },
     frequency: {
-      type: String,
-      enum: ['daily', 'weekly'],
-      default: 'daily',
+      type: {
+        type: String,
+        enum: [
+          'daily',
+          'weekly',
+          'monthly',
+          'weekly_target',
+          'weekly_days',
+          'interval_weeks',
+          'monthly_days',
+          'monthly_pattern'
+        ],
+        required: true,
+        default: 'daily',
+      },
+      targetCount: { type: Number, min: 1, max: 31 },
+      daysOfWeek: [{ type: Number, min: 0, max: 6 }],
+      daysOfMonth: [{ type: Number, min: 1, max: 31 }],
+      intervalWeeks: { type: Number, min: 1 },
+      monthlyPattern: {
+        weekNumber: { type: Number, min: 1, max: 5 },
+        dayOfWeek: { type: Number, min: 0, max: 6 }
+      }
     },
     status: {
       type: Boolean,

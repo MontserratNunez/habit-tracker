@@ -1,9 +1,39 @@
 import { z } from 'zod';
 import * as habitService from '../services/habit.service.js';
 
-const habitSchema = z.object({
+const frequencyObjectSchema = z.object({
+  type: z.enum([
+    'daily',
+    'weekly',
+    'monthly',
+    'weekly_target',
+    'weekly_days',
+    'interval_weeks',
+    'monthly_days',
+    'monthly_pattern',
+  ]),
+  targetCount: z.number().int().min(1).max(31).optional(),
+  daysOfWeek: z.array(z.number().int().min(0).max(6)).optional(),
+  daysOfMonth: z.array(z.number().int().min(1).max(31)).optional(),
+  intervalWeeks: z.number().int().min(1).optional(),
+  monthlyPattern: z
+    .object({
+      weekNumber: z.number().int().min(1).max(5),
+      dayOfWeek: z.number().int().min(0).max(6),
+    })
+    .optional(),
+});
+
+const frequencySchema = z.preprocess((val) => {
+  if (typeof val === 'string') {
+    return { type: val };
+  }
+  return val;
+}, frequencyObjectSchema);
+
+const habitCreateSchema = z.object({
   title: z.string().min(1, 'El título es obligatorio').max(100, 'El título es muy largo'),
-  frequency: z.enum(['daily', 'weekly']).default('daily'),
+  frequency: frequencySchema.default({ type: 'daily' }),
 });
 
 export const getHabits = async (req, res, next) => {
@@ -17,7 +47,7 @@ export const getHabits = async (req, res, next) => {
 
 export const createHabit = async (req, res, next) => {
   try {
-    const validatedData = habitSchema.parse(req.body);
+    const validatedData = habitCreateSchema.parse(req.body);
     const habit = await habitService.createNewHabit(validatedData, req.user.id);
 
     res.status(201).json({ success: true, data: habit });
