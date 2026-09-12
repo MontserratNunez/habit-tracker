@@ -8,7 +8,7 @@ const habitSchema = z.object({
 
 export const getHabits = async (req, res, next) => {
   try {
-    const habits = await habitService.getUserHabits(req.user.id);
+    const habits = await habitService.getUserHabits(req.user.id, req.query.status);
     res.status(200).json({ success: true, count: habits.length, data: habits });
   } catch (error) {
     next(error);
@@ -21,6 +21,24 @@ export const createHabit = async (req, res, next) => {
     const habit = await habitService.createNewHabit(validatedData, req.user.id);
 
     res.status(201).json({ success: true, data: habit });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const toggleHabitStatus = async (req, res, next) => {
+  try {
+    const updatedHabit = await habitService.toggleHabitStatusService(req.params.id, req.user.id);
+    res.status(200).json({ success: true, data: updatedHabit });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteHabit = async (req, res, next) => {
+  try {
+    await habitService.deleteHabitService(req.params.id, req.user.id);
+    res.status(200).json({ success: true, message: 'Hábito eliminado exitosamente' });
   } catch (error) {
     next(error);
   }

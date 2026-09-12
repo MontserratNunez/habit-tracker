@@ -19,6 +19,10 @@ const habitSchema = new mongoose.Schema(
       enum: ['daily', 'weekly'],
       default: 'daily',
     },
+    status: {
+      type: Boolean,
+      default: true,
+    },
     currentStreak: {
       type: Number,
       default: 0,
