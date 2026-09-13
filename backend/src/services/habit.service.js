@@ -4,8 +4,21 @@ import AppError from '../utils/AppError.js';
 
 const DAY_NAMES = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 
+
+const parseLocalDate = (dateStr, isEndOfDay = false) => {
+  if (!dateStr || typeof dateStr !== 'string') return new Date(NaN);
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return new Date(NaN);
+
+  const [year, month, day] = parts;
+  if (isEndOfDay) {
+    return new Date(year, month - 1, day, 23, 59, 59, 999);
+  }
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+};
+
 // ==========================================
-// Enpoints CRUD
+// Endpoints CRUD
 // ==========================================
 
 export const getUserHabits = async (userId, statusQuery) => {
@@ -166,7 +179,7 @@ export const isHabitDueToday = (habit, date = new Date()) => {
     case 'interval_weeks': {
       const interval = freq.intervalWeeks || 1;
       const startDate = new Date(habit.createdAt || targetDate);
-      
+
       const startWeek = getStartOfWeek(startDate);
       const currentWeek = getStartOfWeek(targetDate);
 
@@ -199,7 +212,7 @@ export const isHabitDueToday = (habit, date = new Date()) => {
 };
 
 // ==========================================
-// Diferent views
+// Different views
 // ==========================================
 
 export const getTodayHabitsService = async (userId) => {
@@ -234,10 +247,8 @@ export const getTodayHabitsService = async (userId) => {
 export const getWeeklyHabitsService = async (userId) => {
   const today = new Date();
 
-  // Obtener el Lunes de la semana actual
   const startOfWeek = getMondayOfWeek(today);
 
-  // Obtener el Domingo de la semana actual
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
   endOfWeek.setHours(23, 59, 59, 999);
@@ -290,11 +301,8 @@ export const getMonthlyHabitsService = async (userId) => {
 };
 
 export const getHabitsHistoryService = async (userId, startDateStr, endDateStr) => {
-  const startDate = new Date(startDateStr);
-  startDate.setHours(0, 0, 0, 0);
-
-  const endDate = new Date(endDateStr);
-  endDate.setHours(23, 59, 59, 999);
+  const startDate = parseLocalDate(startDateStr, false);
+  const endDate = parseLocalDate(endDateStr, true);
 
   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
     throw new AppError('Las fechas proporcionadas no son válidas', 400);
@@ -325,7 +333,7 @@ export const getHabitsHistoryService = async (userId, startDateStr, endDateStr) 
 };
 
 // ==========================================
-// utils
+// Utils
 // ==========================================
 
 const isSameDay = (d1, d2) => {
@@ -365,7 +373,7 @@ const getMondayOfWeek = (d) => {
   const date = new Date(d);
   date.setHours(0, 0, 0, 0);
   const day = date.getDay();
-  const diff = day === 0 ? -6 : 1 - day; // Ajuste para Domingo (0)
+  const diff = day === 0 ? -6 : 1 - day;
   date.setDate(date.getDate() + diff);
   return date;
 };
@@ -389,9 +397,6 @@ const getCompletionsInCurrentMonth = (completedDates = [], targetDate) => {
     return d.getFullYear() === year && d.getMonth() === month;
   }).length;
 };
-
-
-
 
 const isHabitScheduledForDate = (habit, targetDate) => {
   const createdAt = new Date(habit.createdAt);
@@ -441,7 +446,6 @@ const isHabitScheduledForDate = (habit, targetDate) => {
 
       return currentWeekNumber === weekNumber;
     }
-
 
     case 'interval_weeks': {
       const interval = freq.intervalWeeks || 1;
@@ -504,7 +508,6 @@ const isHabitScheduledForDate = (habit, targetDate) => {
   }
 };
 
-
 const getHabitStatusForDate = (habit, targetDate, today) => {
   const isCompleted = habit.completedDates.some((d) => isSameDay(new Date(d), targetDate));
   if (isCompleted) return 'completed';
@@ -515,11 +518,10 @@ const getHabitStatusForDate = (habit, targetDate, today) => {
   const currentDate = new Date(today);
   currentDate.setHours(0, 0, 0, 0);
 
-  if (date > currentDate) return 'upcoming'; // Día futuro
-  if (date.getTime() === currentDate.getTime()) return 'pending'; // Hoy pendiente
-  return 'missed'; // Día pasado no realizado (omitido / no hecho)
+  if (date > currentDate) return 'upcoming';
+  if (date.getTime() === currentDate.getTime()) return 'pending';
+  return 'missed';
 };
-
 
 const generateCalendarDaysRange = (habits, startDate, endDate) => {
   const today = new Date();
