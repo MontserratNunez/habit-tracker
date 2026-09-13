@@ -2,6 +2,8 @@ import Habit from '../models/habit.js';
 import mongoose from 'mongoose';
 import AppError from '../utils/AppError.js';
 
+const DAY_NAMES = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+
 // ==========================================
 // Enpoints CRUD
 // ==========================================
@@ -230,80 +232,60 @@ export const getTodayHabitsService = async (userId) => {
 };
 
 export const getWeeklyHabitsService = async (userId) => {
-  const habits = await Habit.find({ user: userId, status: true });
   const today = new Date();
-  const startOfWeek = getStartOfWeek(today);
-  const endOfWeek = getEndOfWeek(today);
 
-  const completed = [];
-  const pending = [];
+  // Obtener el Lunes de la semana actual
+  const startOfWeek = getMondayOfWeek(today);
 
-  habits.forEach((habit) => {
-    const completionsThisWeek = habit.completedDates.filter((d) => {
-      const date = new Date(d);
-      return date >= startOfWeek && date <= endOfWeek;
-    }).length;
+  // Obtener el Domingo de la semana actual
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
 
-    let targetRequired = 1;
-    if (habit.frequency?.type === 'weekly_target') {
-      targetRequired = habit.frequency.targetCount || 1;
-    } else if (habit.frequency?.type === 'weekly_days' && Array.isArray(habit.frequency.daysOfWeek)) {
-      targetRequired = habit.frequency.daysOfWeek.length;
-    }
-
-    if (completionsThisWeek >= targetRequired) {
-      completed.push({ ...habit.toObject(), completionsThisWeek });
-    } else {
-      pending.push({ ...habit.toObject(), completionsThisWeek, targetRequired });
-    }
+  const habits = await Habit.find({
+    user: userId,
+    status: true,
+    createdAt: { $lte: endOfWeek },
   });
+
+  const days = generateCalendarDaysRange(habits, startOfWeek, endOfWeek);
 
   return {
     period: 'this_week',
-    summary: {
-      totalActive: habits.length,
-      completedCount: completed.length,
-      pendingCount: pending.length,
+    range: {
+      startDate: formatDateKey(startOfWeek),
+      endDate: formatDateKey(endOfWeek),
     },
-    data: { completed, pending },
+    days,
   };
 };
 
 export const getMonthlyHabitsService = async (userId) => {
-  const habits = await Habit.find({ user: userId, status: true });
   const today = new Date();
-  const startOfMonth = getStartOfMonth(today);
-  const endOfMonth = getEndOfMonth(today);
 
-  const completed = [];
-  const pending = [];
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  startOfMonth.setHours(0, 0, 0, 0);
 
-  habits.forEach((habit) => {
-    const completionsThisMonth = habit.completedDates.filter((d) => {
-      const date = new Date(d);
-      return date >= startOfMonth && date <= endOfMonth;
-    }).length;
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  endOfMonth.setHours(23, 59, 59, 999);
 
-    let targetRequired = 1;
-    if (habit.frequency?.type === 'monthly_days' && Array.isArray(habit.frequency.daysOfMonth)) {
-      targetRequired = habit.frequency.daysOfMonth.length;
-    }
-
-    if (completionsThisMonth >= targetRequired) {
-      completed.push({ ...habit.toObject(), completionsThisMonth });
-    } else {
-      pending.push({ ...habit.toObject(), completionsThisMonth, targetRequired });
-    }
+  const habits = await Habit.find({
+    user: userId,
+    status: true,
+    createdAt: { $lte: endOfMonth },
   });
+
+  const calendar = generateCalendarDaysRange(habits, startOfMonth, endOfMonth);
 
   return {
     period: 'this_month',
-    summary: {
-      totalActive: habits.length,
-      completedCount: completed.length,
-      pendingCount: pending.length,
+    range: {
+      startDate: formatDateKey(startOfMonth),
+      endDate: formatDateKey(endOfMonth),
     },
-    data: { completed, pending },
+    monthName: today.toLocaleString('es-ES', { month: 'long' }),
+    year: today.getFullYear(),
+    calendar,
   };
 };
 
@@ -327,37 +309,18 @@ export const getHabitsHistoryService = async (userId, startDateStr, endDateStr) 
     createdAt: { $lte: endDate },
   }).sort({ createdAt: -1 });
 
-  let totalCompletionsInRange = 0;
-
-  const historyData = habits.map((habit) => {
-    const completionsInRange = habit.completedDates.filter((dateStr) => {
-      const d = new Date(dateStr);
-      return d >= startDate && d <= endDate;
-    });
-
-    totalCompletionsInRange += completionsInRange.length;
-
-    return {
-      _id: habit._id,
-      title: habit.title,
-      frequency: habit.frequency,
-      status: habit.status,
-      createdAt: habit.createdAt,
-      completedDatesInRange: completionsInRange,
-      totalCompletionsCount: completionsInRange.length,
-    };
-  });
+  const calendar = generateCalendarDaysRange(habits, startDate, endDate);
 
   return {
     period: {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
+      startDate: formatDateKey(startDate),
+      endDate: formatDateKey(endDate),
     },
     summary: {
       totalHabits: habits.length,
-      totalCompletions: totalCompletionsInRange,
+      totalDays: calendar.length,
     },
-    data: historyData,
+    calendar,
   };
 };
 
@@ -373,6 +336,13 @@ const isSameDay = (d1, d2) => {
     date1.getMonth() === date2.getMonth() &&
     date1.getDate() === date2.getDate()
   );
+};
+
+const formatDateKey = (date) => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 };
 
 const getStartOfWeek = (d) => {
@@ -391,14 +361,13 @@ const getEndOfWeek = (d) => {
   return end;
 };
 
-const getStartOfMonth = (d) => {
+const getMondayOfWeek = (d) => {
   const date = new Date(d);
-  return new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0);
-};
-
-const getEndOfMonth = (d) => {
-  const date = new Date(d);
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+  date.setHours(0, 0, 0, 0);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day; // Ajuste para Domingo (0)
+  date.setDate(date.getDate() + diff);
+  return date;
 };
 
 const getCompletionsInCurrentWeek = (completedDates = [], targetDate) => {
@@ -419,4 +388,193 @@ const getCompletionsInCurrentMonth = (completedDates = [], targetDate) => {
     const d = new Date(dateStr);
     return d.getFullYear() === year && d.getMonth() === month;
   }).length;
+};
+
+
+
+
+const isHabitScheduledForDate = (habit, targetDate) => {
+  const createdAt = new Date(habit.createdAt);
+  createdAt.setHours(0, 0, 0, 0);
+
+  const date = new Date(targetDate);
+  date.setHours(0, 0, 0, 0);
+
+  if (createdAt > date) return false;
+
+  const freq = habit.frequency;
+  if (!freq || !freq.type) return true;
+
+  const dayOfWeek = date.getDay();
+  const dayOfMonth = date.getDate();
+
+  switch (freq.type) {
+    case 'daily':
+      return true;
+
+    case 'weekly_days':
+      if (Array.isArray(freq.daysOfWeek) && freq.daysOfWeek.length > 0) {
+        return freq.daysOfWeek.includes(dayOfWeek);
+      }
+      return true;
+
+    case 'monthly_days':
+      if (Array.isArray(freq.daysOfMonth) && freq.daysOfMonth.length > 0) {
+        return freq.daysOfMonth.includes(dayOfMonth);
+      }
+      return true;
+
+    case 'monthly_pattern': {
+      if (!freq.monthlyPattern) return false;
+      const { weekNumber, dayOfWeek: patternDay } = freq.monthlyPattern;
+
+      if (dayOfWeek !== patternDay) return false;
+
+      const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+      const firstMondayOfMonth = getMondayOfWeek(firstDayOfMonth);
+
+      const targetMonday = getMondayOfWeek(date);
+
+      const diffInTime = targetMonday.getTime() - firstMondayOfMonth.getTime();
+      const diffInDays = Math.round(diffInTime / (1000 * 3600 * 24));
+      const currentWeekNumber = Math.floor(diffInDays / 7) + 1;
+
+      return currentWeekNumber === weekNumber;
+    }
+
+
+    case 'interval_weeks': {
+      const interval = freq.intervalWeeks || 1;
+      const createdMonday = getMondayOfWeek(createdAt);
+      const targetMonday = getMondayOfWeek(date);
+
+      const diffInTime = targetMonday.getTime() - createdMonday.getTime();
+      const diffInDays = Math.floor(diffInTime / (1000 * 3600 * 24));
+      const diffInWeeks = Math.floor(diffInDays / 7);
+
+      if (diffInWeeks < 0 || diffInWeeks % interval !== 0) return false;
+
+      if (Array.isArray(freq.daysOfWeek) && freq.daysOfWeek.length > 0) {
+        return freq.daysOfWeek.includes(dayOfWeek);
+      }
+      return true;
+    }
+
+    case 'weekly':
+    case 'weekly_target': {
+      const isCompletedThisDate = habit.completedDates.some((d) => isSameDay(new Date(d), date));
+      if (isCompletedThisDate) return true;
+
+      const targetRequired = freq.targetCount || 1;
+      const startOfWeek = getMondayOfWeek(date);
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
+
+      const completionsThisWeek = habit.completedDates.filter((d) => {
+        const compDate = new Date(d);
+        return compDate >= startOfWeek && compDate <= endOfWeek;
+      }).length;
+
+      if (completionsThisWeek >= targetRequired) return false;
+
+      return true;
+    }
+
+    case 'monthly': {
+      const isCompletedThisDate = habit.completedDates.some((d) => isSameDay(new Date(d), date));
+      if (isCompletedThisDate) return true;
+
+      const targetRequired = freq.targetCount || 1;
+      const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+      const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+
+      const completionsThisMonth = habit.completedDates.filter((d) => {
+        const compDate = new Date(d);
+        return compDate >= startOfMonth && compDate <= endOfMonth;
+      }).length;
+
+      if (completionsThisMonth >= targetRequired) return false;
+
+      return true;
+    }
+
+    default:
+      return true;
+  }
+};
+
+
+const getHabitStatusForDate = (habit, targetDate, today) => {
+  const isCompleted = habit.completedDates.some((d) => isSameDay(new Date(d), targetDate));
+  if (isCompleted) return 'completed';
+
+  const date = new Date(targetDate);
+  date.setHours(0, 0, 0, 0);
+
+  const currentDate = new Date(today);
+  currentDate.setHours(0, 0, 0, 0);
+
+  if (date > currentDate) return 'upcoming'; // Día futuro
+  if (date.getTime() === currentDate.getTime()) return 'pending'; // Hoy pendiente
+  return 'missed'; // Día pasado no realizado (omitido / no hecho)
+};
+
+
+const generateCalendarDaysRange = (habits, startDate, endDate) => {
+  const today = new Date();
+  const daysArray = [];
+
+  const current = new Date(startDate);
+  current.setHours(0, 0, 0, 0);
+
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+
+  while (current <= end) {
+    const dayDate = new Date(current);
+    const dayOfWeekIndex = dayDate.getDay();
+
+    const dayData = {
+      date: formatDateKey(dayDate),
+      dayName: DAY_NAMES[dayOfWeekIndex],
+      dayOfMonth: dayDate.getDate(),
+      dayOfWeek: dayOfWeekIndex,
+      summary: {
+        totalScheduled: 0,
+        completedCount: 0,
+        pendingCount: 0,
+        missedCount: 0,
+        upcomingCount: 0,
+      },
+      habits: {
+        completed: [],
+        pending: [],
+        missed: [],
+        upcoming: [],
+      },
+    };
+
+    habits.forEach((habit) => {
+      if (isHabitScheduledForDate(habit, dayDate)) {
+        const status = getHabitStatusForDate(habit, dayDate, today);
+        const habitSummary = {
+          _id: habit._id,
+          title: habit.title,
+          frequency: habit.frequency,
+          currentStreak: habit.currentStreak,
+          status: habit.status,
+        };
+
+        dayData.habits[status].push(habitSummary);
+        dayData.summary.totalScheduled++;
+        dayData.summary[`${status}Count`]++;
+      }
+    });
+
+    daysArray.push(dayData);
+    current.setDate(current.getDate() + 1);
+  }
+
+  return daysArray;
 };
