@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom';
+import logo from '../assets/logo.svg';
 
 export const AuthLayout = () => {
   return (
@@ -6,10 +7,8 @@ export const AuthLayout = () => {
 
       <div className="md:w-1/2 bg-brand-cream p-8 md:p-16 flex flex-col justify-between border-b md:border-b-0 md:border-r border-brand-cream/50">
         <div>
-          <div className="flex items-center gap-2 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-brand-blue flex items-center justify-center font-bold text-white text-xl">
-              D
-            </div>
+          <div className="flex items-center gap-2.5 mb-8">
+            <img src={logo} alt="Daytrack Logo" className="w-9 h-9 object-contain" />
             <span className="text-2xl font-black tracking-tight text-brand-brown">Daytrack</span>
           </div>
 
