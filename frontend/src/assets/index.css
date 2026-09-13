@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-brand-blue: #228e9d;
   --color-brand-red: #b12800;
@@ -7,4 +9,5 @@
   --color-brand-cream: #fce3c3; 
   --color-brand-yellow: #ed8f27;
   --color-brand-bg-light: #ffffff;
+  --color-brand-bg-dark: #2E2E2E;
 }
