@@ -6,6 +6,7 @@ import { Signup } from './pages/Signup';
 import { Dashboard } from './pages/Dashboard';
 import { ProtectedRoute, PublicOnlyRoute } from './components/ProtectedRoute';
 import './assets/App.css'
+import { Habits } from './pages/Habits';
 
 export default function App() {
   return (
@@ -21,7 +22,7 @@ export default function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/habits" element={<Dashboard />} />
+            <Route path="/habits" element={<Habits />} />
           </Route>
 
           <Route path="*" element={<Login />} />

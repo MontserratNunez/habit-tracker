@@ -41,3 +41,8 @@ export const deleteHabitRequest = async (id) => {
   const { data } = await API.delete(`/habits/${id}`);
   return data;
 };
+
+export const getAllHabits = async () => {
+  const { data } = await API.get(`/habits`);
+  return data;
+};
